@@ -22,7 +22,7 @@ if __name__ == "__main__":
         print(Fore.YELLOW + 'Waiting for a connection')
         connection, client_address = sock.accept()
 
-        file = open('to_recv.jpeg','wb')
+        file = open('to_recv.jpeg', 'wb')
 
         try:
             print('Connection from {}'.format(client_address))
@@ -31,11 +31,9 @@ if __name__ == "__main__":
             while True:
                 data = connection.recv(1412)
                 count += 1
-                #print('Data received {!r}'.format(data))
                 print('Receiving data {} ...'.format(count))
                 file.write(data)
                 if data:
-                    #print('Sending data back to the client')
                     connection.sendall(data)
                 else:
                     print('All done from {}'.format(client_address))

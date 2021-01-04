@@ -3,14 +3,15 @@ import sys
 import os
 
 from colorama import init, Fore, Style
+from tqdm import tqdm
+
+import math
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def load_file(file_path):
-    with open(file_path, 'rb') as image_bytes:
-        return image_bytes
 
 if __name__ == "__main__":
+    # Initialize the colorama instance
     init(autoreset=True)
 
     # Read the image to be sended
@@ -31,11 +32,8 @@ if __name__ == "__main__":
 
     try:
         # Send data
-        #message = b'This is the message. It will be repeated'
         message = file.read()
         print('Sending {}'.format(file_path))
-        print(len(message)/1412)
-        #print('Sending {!r}'.format(message))
         sock.sendall(message)
 
         # Look for the response
@@ -44,13 +42,16 @@ if __name__ == "__main__":
 
         count = 0
 
+        progress_bar = tqdm(total=math.ceil(len(message)/1412))
+
+        # Read the amount of data received from the server
         while amount_received < amount_expected:
             data = sock.recv(1412)
             count += 1
             amount_received += len(data)
-            #print('Received {!r}'.format(data))
-            print('Receiving data {} ...'.format(count))
+            progress_bar.update(1)
 
+        progress_bar.close()
         print('All done.')
 
     finally:
