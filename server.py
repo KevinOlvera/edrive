@@ -8,8 +8,7 @@ from colorama import init, Fore, Style
 
 import math
 
-BUFFER_SIZE = 1024
-MAX_CONNECTIONS = 2
+from edrive import *
 
 
 class Message():
@@ -34,26 +33,28 @@ class Message():
 
 
 class Server():
-    def __init__(self, host: str = 'localhost', port: int = 5511):
+    def __init__(self, host: str, port: int):
         # Define an array to save the active clients connected to the server_address
         self.clients = []
         self.server_address = (host, port)
 
         # Create a TCP/IP socket
+        logging.info('Creating TCP/IP socket')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Bind the socket to the port
+        logging.info(f'Binding the socket to the port {self.server_address[1]}')
         self.sock.bind(self.server_address)
         # Listen for incoming connections
+        logging.info(f'Enabling the server to accept incoming connections. Maximum connections: {MAX_CONNECTIONS}')
         self.sock.listen(MAX_CONNECTIONS)
         # Set as non blocking socket mode
+        logging.info(f'Configuring as non-blocking socket mode')
         self.sock.setblocking(False)
 
         # Define threads for accepting and processing connections in the server
-        accept_thread = threading.Thread(target=self.accept_connections)
-        process_thread = threading.Thread(target=self.process_connections)
-        # Attach the threads to the main process
-        accept_thread.daemon = True
-        process_thread.daemon = True
+        accept_thread = threading.Thread(target=self.accept_connections, daemon=True)
+        process_thread = threading.Thread(target=self.process_connections, daemon=True)
+
         # Start the threads
         accept_thread.start()
         process_thread.start()
@@ -82,42 +83,65 @@ class Server():
 
     
     def process_connections(self):
+        logging.info('Ready to process new connections')
         while True:
             # Condition to start receiving messages if there are one or more clients connected to the server
             if len(self.clients) > 0:
                 for client in self.clients:
                     try:
                         # Receive a message from each client
-                        data = client.recv(BUFFER_SIZE)
+                        config = client.recv(BUFFER_SIZE)
                         # Load data from bytes to Python object
-                        loaded_data = pickle.loads(data)
+                        config_data = pickle.loads(config)
 
-                        logging.info(f'Client {client.getpeername()} is sending {loaded_data.file_size} bytes - {loaded_data.file_name}')
+                        operation_mode = 'CREATE' if config_data.operation == 2 else 'DELETE'
 
-                        amount_packages = math.ceil(loaded_data.file_size/BUFFER_SIZE)
+                        logging.info(f'{operation_mode}: Client {client.getpeername()}, file \'{config_data.file_name}\', {config_data.file_size} bytes')
 
-                        if loaded_data.operation == 2:
-                            file = open(f'{client.getpeername()}_{loaded_data.file_name}', 'wb')
-                            count = 1
-                            amount_received = 0
-                            amount_expected = loaded_data.file_size
+                        #bytes_expected = config_data.file_size
+                        #amount_packages = math.ceil(bytes_expected/BUFFER_SIZE)
 
-                            while True:
-                                data = client.recv(BUFFER_SIZE)
-                                amount_received += len(data)
-                                
-                                logging.info(f'Receiving {len(data)} bytes from {client.getpeername()} | {count}/{amount_packages} | {amount_received}/{amount_expected}')
 
-                                file.write(data)
-                                count += 1
+                        #if int(config_data.operation) == 2:
+                            #file = open(f'\home\{client.getpeername()}_{config_data.file_name}', 'wb')
+                            #file_data = client.recv(BUFFER_SIZE)
+                            #file.write(pickle.loads(file_data))
+                            #file.close()
+                        #file = open(THIS_DIR + f'\home\{client.getpeername()}_{config_data.file_name}', 'wb')
+                        print('file opened')
+                        while True:
+                            print('receiving data...')
+                            data = client.recv(1024)
+                            print('data=%s', (data))
+                            if not data:
+                                break
+                            #if pickle.loads(data).operation == 3:
+                            #    break
+                            # write data to a file
+                            #file.write(data)
 
-                                if data:
-                                    client.sendall(data)
-                                else:
-                                    logging.info(f'Client {client.getpeername()} successfully sent {loaded_data.file_size} bytes - {loaded_data.file_name}')
-                                    file.close()
-                                    break
-
+                        #file.close()
+                        #print('Successfully get the file')
+                        #    count = 1
+                        #    amount_received = 0
+                        #    amount_expected = loaded_data.file_size
+#
+                        #    while True:
+                        #        data = client.recv(BUFFER_SIZE)
+                        #        amount_received += len(data)
+                        #        
+                        #        logging.info(f'Receiving {len(data)} bytes from {client.getpeername()} | {count}/{amount_packages} | {amount_received}/#{amount_expected}')
+#
+                        #        file.write(data)
+                        #        count += 1
+#
+                        #        if data:
+                        #            client.sendall(data)
+                        #        else:
+                        #            logging.info(f'Client {client.getpeername()} successfully sent {loaded_data.file_size} bytes - {loaded_data.#file_name}')
+                        #            file.close()
+                        #            break
+#
                             #self.send_to_all(data, client)
 
                     except:
@@ -140,6 +164,5 @@ if __name__ == "__main__":
     # Initialize the colorama instance
     init(autoreset=True)
 
-    logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO, datefmt="%H:%M:%S")
-
-    s = Server()
+    logging.basicConfig(format="[%(asctime)s] %(message)s", level=logging.INFO, datefmt='%m/%d/%Y %H:%M:%S')
+    s = Server(socket.gethostbyname(socket.gethostname()), 5511)
