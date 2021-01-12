@@ -90,13 +90,19 @@ class Server():
                 for client in self.clients:
                     try:
                         # Receive a message from each client
-                        config = client.recv(BUFFER_SIZE)
+                        data = client.recv(BUFFER_SIZE + 18)
+
+                        data_loaded = pickle.loads(data)
+
+                        logging.info(f'Client {client.getpeername()}, SEND: {len(data_loaded)} bytes')
+
+
                         # Load data from bytes to Python object
-                        config_data = pickle.loads(config)
+                        #config_data = pickle.loads(config)
 
-                        operation_mode = 'CREATE' if config_data.operation == 2 else 'DELETE'
+                        #operation_mode = 'CREATE' if config_data.operation == 2 else 'DELETE'
 
-                        logging.info(f'{operation_mode}: Client {client.getpeername()}, file \'{config_data.file_name}\', {config_data.file_size} bytes')
+                        # logging.info(f'{operation_mode}: Client {client.getpeername()}, file \'{config_data.file_name}\', {config_data.file_size} bytes')
 
                         #bytes_expected = config_data.file_size
                         #amount_packages = math.ceil(bytes_expected/BUFFER_SIZE)
@@ -108,13 +114,13 @@ class Server():
                             #file.write(pickle.loads(file_data))
                             #file.close()
                         #file = open(THIS_DIR + f'\home\{client.getpeername()}_{config_data.file_name}', 'wb')
-                        print('file opened')
-                        while True:
-                            print('receiving data...')
-                            data = client.recv(1024)
-                            print('data=%s', (data))
-                            if not data:
-                                break
+                        #print('file opened')
+                        #while True:
+                        #    print('receiving data...')
+                        #    data = client.recv(1024)
+                        #    print('data=%s', (data))
+                        #    if not data:
+                        #        break
                             #if pickle.loads(data).operation == 3:
                             #    break
                             # write data to a file
@@ -125,25 +131,20 @@ class Server():
                         #    count = 1
                         #    amount_received = 0
                         #    amount_expected = loaded_data.file_size
-#
                         #    while True:
                         #        data = client.recv(BUFFER_SIZE)
                         #        amount_received += len(data)
                         #        
                         #        logging.info(f'Receiving {len(data)} bytes from {client.getpeername()} | {count}/{amount_packages} | {amount_received}/#{amount_expected}')
-#
                         #        file.write(data)
                         #        count += 1
-#
                         #        if data:
                         #            client.sendall(data)
                         #        else:
                         #            logging.info(f'Client {client.getpeername()} successfully sent {loaded_data.file_size} bytes - {loaded_data.#file_name}')
                         #            file.close()
                         #            break
-#
-                            #self.send_to_all(data, client)
-
+                        self.send_to_all(data, client)
                     except:
                         pass
 
@@ -153,16 +154,25 @@ class Server():
             try:
                 if c != client:
                     # Send a message to each client
-                    c.sendall(data)
+                    c.send(data)
             except Exception as msg:
-                logging.info(Fore.RED + str(c) + ': ' + str(msg))
+                logging.info(Fore.RED + 'Client' + str(c.getpeername()) + ': ' + str(msg))
                 # If something wrong happens remove the client from the active list
                 self.clients.remove(c)
+                logging.info(Fore.YELLOW + 'Client' + str(c.getpeername()) + ' was removed from the active host list')
 
 
 if __name__ == "__main__":
     # Initialize the colorama instance
     init(autoreset=True)
 
+    #LOG = THIS_DIR + (f'\\tmp\edrive.log' if SYSTEM == 'Windows' else f'/tmp/edrive.log')
+    #logging.basicConfig(filename=LOG, filemode='t' ,format="[%(asctime)s] %(message)s", level=logging.INFO, datefmt='%m/%d/%Y %H:%M:%S')
     logging.basicConfig(format="[%(asctime)s] %(message)s", level=logging.INFO, datefmt='%m/%d/%Y %H:%M:%S')
+    
+    # console handler  
+    #console = logging.StreamHandler()  
+    #console.setLevel(logging.ERROR)  
+    #logging.getLogger("").addHandler(console)
+
     s = Server(socket.gethostbyname(socket.gethostname()), 5511)

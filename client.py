@@ -2,6 +2,8 @@ import socket
 import sys
 import pickle
 import threading
+import time
+import logging
 
 from tqdm import tqdm
 import math
@@ -37,81 +39,48 @@ class Client():
 
         # Loop to send the messages to the server
         while True:
-            option = input('1-Send file, 2-Delete file, 3-Exit ->')
-            if option == '1':
-                file_name = input('Enter the file name ->')
-                file_path = THIS_DIR + (f'\home\{file_name}' if SYSTEM == 'Windows' else f'/home/{file_name}')
+            #option = input('1-Send file, 2-Delete file, 3-Exit ->')
+            #if option == '1':
+            #file_name = input('Enter the file name ->')
+            input()
+            file_name = 'to_send_2.txt'
+            file_path = THIS_DIR + (f'\home\{file_name}' if SYSTEM == 'Windows' else f'/home/{file_name}')
+            file_bytes = load_file_bytes(file_path)
+            file_size = len(file_bytes)
 
-                try:
-                    #with open(file_path, 'rb') as file:
-                    file_size = os.path.getsize(file_path)
-                    file_bytes = load_file_bytes(file_path)
+            print(f'Sending {file_name} file : {file_size} bytes')
 
-                    connection_message = Message(CTRL_SYNC, file_name, file_size, file_bytes)
-                    print(f'Sending the file \'{file_name}\' - {file_size} bytes')
-                    self.send_msg(connection_message)
+            BUFFER_SIZE = 10
+            
+            bytes_sent = 0
+            remaining_bytes = file_size
+            min = 0
+            max = BUFFER_SIZE
 
-
-                        #l = file.read(1024)
-                        #while (l):
-                        #    self.sock.send(l)
-                        #    print('Sent ',repr(l))
-                        #    l = file.read(1024)
-
-                        #print('Done sending')
-
-                        #file.close()
-
-                        #finish_message = Message(CTRL_FINISH, file_name, file_size, b'')
-                        #self.send_msg(finish_message)
-
-
-
-
-                except IOError as msg:
-                    print(Fore.RED + str(msg))
-                    return None
-
+            while bytes_sent < file_size:
+                remaining_bytes = file_size - bytes_sent
+                size = BUFFER_SIZE if remaining_bytes > BUFFER_SIZE else remaining_bytes
                 
-                    # Look for the response
-                    #amount_received = 0
-                    #amount_expected = len(file_bytes)
-
-                    #count = 1
-
-                    #amount_packages = math.ceil(len(file_bytes)/BUFFER_SIZE)
-
-                    # Read the amount of data received from the server
-                    #while amount_received < amount_expected:
-                    #    data = self.sock.recv(BUFFER_SIZE)
-                    #    amount_received += len(data)
-                    #    count += 1
-                    #    print(f'Receiving {len(data)} bytes from {self.sock.getpeername()} | {count}/{amount_packages} | {amount_received}/#{amount_expected}')
-
-                    #print('All the bytes was sent to the server')
-
-                else:
-                    print(Fore.RED + 'Error: Please enter an existing file name')
-            elif option == '2':
-                pass
-            elif option == '3':
-                self.sock.close()
-                sys.exit()
-            else:
-                print(Fore.RED + 'Error: Please enter a valid option')
+                #print(f'bytes sent={bytes_sent}, remaining bytes={remaining_bytes}, total bytes={file_size} : min={min} : max={max + size - 1000}')
+                
+                bytes_to_send = file_bytes[min:max]
+                bytes_sent += len(bytes_to_send)
+                min += BUFFER_SIZE
+                max += size
+                self.send_msg(bytes_to_send)
+                time.sleep(1)
 
     def recv_message(self,):
         #data_recv = b''
         while True:
             try:
-                data = self.sock.recv(BUFFER_SIZE)
+                data = self.sock.recv(1024 + 18)
                 if data:
+                    #logging.INFO('recibo')
+                    #data_recv = data_recv + pickle.loads(data)
                     print(pickle.loads(data))
-                    #data_recv += data
                 #else:
-                #    pass
-                    #print(pickle.loads(data_recv))
-                    #data_recv = b''
+                    #logging.INFO('no recibo')
             except:
                 pass
                 #print(Fore.RED + str(Exception))
@@ -123,14 +92,6 @@ class Client():
 if __name__ == "__main__":
     # Initialize the colorama instance
     init(autoreset=True)
-
-    # Set the file name to be sended
-    #file_name = 'to_send.txt'
-
-    # Read the image to be sended
-    #file_path = THIS_DIR + (f'\\{file_name}' if SYSTEM == 'Windows' else f'/{file_name}')
-    #file_bytes = load_file_bytes(file_path)
-
-    #new_message = Message(CTRL_CREATE, file_name, len(file_bytes), file_bytes)
-
+    logging.basicConfig(format="[%(asctime)s] %(message)s", level=logging.INFO, datefmt='%m/%d/%Y %H:%M:%S')
+    
     c = Client('192.168.0.120', 5511)
